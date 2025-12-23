@@ -42,6 +42,9 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
+
+
+    /*
     QFile templateFile(TemplatePath);
     if(!templateFile.open(QFile::ReadOnly)){
         qDebug() << "open(QFile::ReadOnly) error path:" << TemplatePath;
@@ -236,7 +239,7 @@ int main(int argc, char *argv[])
     qDebug() << process.readAllStandardError();
 
 
-
+*/
 
     MainWindow w;
     w.show();

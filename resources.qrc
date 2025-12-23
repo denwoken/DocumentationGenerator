@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>Stylesheets/TolmiGrayOrangeV1.qss</file>
+        <file>images/settings_icon.png</file>
     </qresource>
 </RCC>

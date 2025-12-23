@@ -15,6 +15,7 @@ QT_END_NAMESPACE
 // }
 #include "Logging.h"
 
+class StatusLamp;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -25,8 +26,18 @@ public:
 
     void keyPressEvent(QKeyEvent *event);
 
+private slots:
+    void on_pushButton_drawIoDialog_clicked();
+
+    void updateDrawIoPath();
+
 private:
     Ui::MainWindow *ui;
     Logging::LogConsoleWidget* m_consoleWidget;
+
+    QString m_drawioPath = "";
+    QString m_drawioVersion = "";
+    StatusLamp* m_drawioPathStatus = nullptr;
+
 };
 #endif // MAINWINDOW_H
