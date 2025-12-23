@@ -1,0 +1,4 @@
+[submodule "LogConsole"]
+	path = LogConsole
+	url = git@github.com:denwoken/LogConsole.git
+	branch = main
