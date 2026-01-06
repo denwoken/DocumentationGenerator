@@ -1,83 +1,79 @@
-#include "mainwindow.h"
-
-#include <QApplication>
-
-#include <QDomDocument>
+#include "DrawioFileParser.h"
+#include "qregularexpression.h"
 #include <QFile>
 #include <QDebug>
-#include <QRegularExpression>
 
-#include <QProcess>
-#include <QDir>
+DrawioFileParser::DrawioFileParser(QObject *parent)
+    : QObject{parent}
+{}
 
-QString TemplatePath = "C:/Users/denwoken/Documents/Qt/DocumentationGenerator/templates/ClassTemplate.drawio";
-QString outputPath = "generated/output.drawio";
-QString drawIoPath = "C:/Program Files/draw.io/draw.io.exe";
-/*
-QRegularExpression rxForSingleParameter("%[^%\\[\\]]+%");
-QRegularExpression rxForMultipleParameters("%[^%\\[\\]]+\\[[^\\]]*\\]%");
-QRegularExpression rxForName("%([a-zA-Z0-9_]+)(\\[.*\\])?%");
-QString extractPropertyName(QString prop){
-    auto m = rxForName.match(prop);
-    if(m.hasMatch()){
-        return m.captured(1);
-    }
-    return "No specified Name?";
-}
-
-QDomElement findCellById(
-    const QDomNodeList &cells,
-    const QString &id)
+bool DrawioFileParser::loadDrawioFile(const QString &path)
 {
-    for (int i = 0; i < cells.count(); ++i) {
-        QDomElement el = cells.at(i).toElement();
-        if (el.attribute("id") == id)
-            return el;
-    }
-    return QDomElement();
-}*/
-
-int main(int argc, char *argv[])
-{
-    QApplication a(argc, argv);
-
-
-    /*
-    QFile templateFile(TemplatePath);
+    QFile templateFile(path);
     if(!templateFile.open(QFile::ReadOnly)){
-        qDebug() << "open(QFile::ReadOnly) error path:" << TemplatePath;
+        qDebug() << "open(QFile::ReadOnly) error path:" << path;
         return 1;
     }
-
-
-    QDomDocument doc;
-    if(!doc.setContent(&templateFile))
+    m_documentTemplate.clear();
+    if(!m_documentTemplate.setContent(&templateFile))
     {
-        qDebug() << "Failed to parse XML";
+        qDebug() << "Failed to parse drawio XML";
         return 1;
     }
     templateFile.close();
+    m_documentOutput = m_documentTemplate;
+
+    return 0;
+}
+
+const QDomDocument* DrawioFileParser::getDrawioDocumentTemplate() const
+{
+    return &m_documentTemplate;
+}
+const QDomDocument* DrawioFileParser::getDrawioDocumentOutput() const
+{
+    return &m_documentOutput;
+}
+
+void DrawioFileParser::setPlaceHoldersParameters(const QMap<QString, QStringList> &placeHolders){
+    m_placeHolders = placeHolders;
+}
 
 
-    QDomElement root = doc.documentElement();
+
+QRegularExpression rxForSingleParameter("%[^%\\[\\]]+%");
+QRegularExpression rxForMultipleParameters("%[^%\\[\\]]+\\[[^\\]]*\\]%");
+QRegularExpression rxForName("%([a-zA-Z0-9_]+)(\\[.*\\])?%");
+
+
+bool DrawioFileParser::insertPlaceHolders(){
+    m_documentOutput = m_documentTemplate;
+
+#define LOCAL_ASSERT(expr, err_message) \
+    if(!expr) {                         \
+        qCritical() << err_message;     \
+        return 1;                       \
+    }                                   \
+
+
+    QDomElement root = m_documentOutput.documentElement();
+    LOCAL_ASSERT(!root.isNull(), "documentElement is not exist");
+
     QDomNodeList diagrams = root.elementsByTagName("diagram");
-    if(diagrams.isEmpty()){
-        qDebug() << "Not found XML root <diagram>";
-        return 1;
-    }
+    LOCAL_ASSERT(!diagrams.isEmpty(),"Not found XML <diagram>")
+    LOCAL_ASSERT(diagrams.size(), "<diagrams> contain nothing");
 
     QDomElement mxGraphModel = diagrams.at(0).firstChildElement("mxGraphModel");
+    LOCAL_ASSERT(!diagrams.isEmpty(), "Not found XML <mxGraphModel>");
+
     QDomElement mxRoot = mxGraphModel.firstChildElement("root");
+    LOCAL_ASSERT(!mxRoot.isNull(), "Not found XML <root>");
 
-
-    QMap<QString, QStringList> parameters = {
-        { "className" ,{"The Name of the Class"}},
-        { "classFields" ,{"class Field 1", "class Field 2"}},
-        { "publicMethods" ,{"public Method 1", "public Method 2"}},
-        { "privateMethods" ,{"private Method 1", "private Method 2"}}
-    };
 
     QDomNodeList cells = mxRoot.elementsByTagName("mxCell");
+    LOCAL_ASSERT(!cells.isEmpty(), "Not found XML <root>");
+
+
     int i=0;
     while(i < cells.count())
     {
@@ -87,13 +83,13 @@ int main(int argc, char *argv[])
         QRegularExpressionMatch singleMatch = rxForSingleParameter.match(val);
         QRegularExpressionMatch multipleMatch = rxForMultipleParameters.match(val);
 
-
         if(singleMatch.hasMatch()){
             QString propertyName = extractPropertyName(val);
             qDebug() << "Имя плейсхолдера singleMatch:" << propertyName;
 
-            if(parameters.contains(propertyName)){
-                QStringList list = parameters[propertyName];
+            auto iter = m_placeHolders.find(propertyName);
+            if(iter != m_placeHolders.end()){
+                QStringList list = *iter;
                 if(list.size()>0) {
                     int len = singleMatch.capturedLength(0);
                     int start = singleMatch.capturedStart(0);
@@ -103,12 +99,10 @@ int main(int argc, char *argv[])
                     newVal.insert(start, list[0]);
 
                     cell.setAttribute("value", newVal);
-
                 }
-
             }
-
         }
+
 
 
         if(multipleMatch.hasMatch()){
@@ -116,8 +110,9 @@ int main(int argc, char *argv[])
             qDebug() << "Имя плейсхолдера multipleMatch:" << propertyName;
 
             // множественный плейсхолдер: копируем ноду на каждую строку
-            if(parameters.contains(propertyName)){
-                QStringList list = parameters[propertyName];
+            auto iter = m_placeHolders.find(propertyName);
+            if(iter != m_placeHolders.end()){
+                QStringList list = *iter;
                 QDomNode parentNode = cell.parentNode();
                 QDomNode prevNode = cell;
                 QDomElement prevGeom = cell.firstChildElement("mxGeometry");
@@ -139,13 +134,11 @@ int main(int argc, char *argv[])
                     newCell.setAttribute("value", newVal);
 
                     // смещаем вниз
-
                     QDomElement geom = newCell.firstChildElement("mxGeometry");
                     if(!geom.isNull()){
                         //double y = geom.attribute("y").toDouble();
                         geom.setAttribute("y", offset);
                         offset += spacing;
-
                     }
 
                     parentNode.insertAfter(newCell, prevNode);
@@ -155,7 +148,6 @@ int main(int argc, char *argv[])
 
                 // удаляем исходную ноду с плейсхолдером
                 parentNode.removeChild(cell);
-
 
                 // подпрвляем остальные элементы
                 QDomElement nextNode = prevNode.toElement().nextSiblingElement();
@@ -169,7 +161,6 @@ int main(int argc, char *argv[])
                     nextNode = nextNode.nextSiblingElement();
                 }
 
-
                 int totalAdjustment = spacing * (list.size()-1);
 
                 QDomElement parent = findCellById(prevNode.parentNode().childNodes(),
@@ -182,64 +173,38 @@ int main(int argc, char *argv[])
                     }
                 }
 
-
-
-
                 i += list.size() -1;
             }
-
-
-
-
-
         }
         i++;
+
+
+
+
+
+
     }
 
-    QFileInfo fi(outputPath);
-    QDir().mkpath(fi.absolutePath());
-    QFile outputFile(outputPath);
-    if(!outputFile.open(QFile::WriteOnly)){
-        qDebug() << "open(QFile::WriteOnly) error path:" << outputPath;
-        return 1;
+
+#undef LOCAL_ASSERT
+
+    return 0;
+}
+
+QString DrawioFileParser::extractPropertyName(QString prop){
+    auto m = rxForName.match(prop);
+    if(m.hasMatch()){
+        return m.captured(1);
     }
-    outputFile.resize(0);
+    return "No specified Name?";
+}
 
-    QTextStream out(&outputFile);
-    doc.save(out, 2, QDomNode::EncodingFromDocument);
-    outputFile.close();
-
-
-
-
-
-
-
-
-
-    QStringList arguments;
-    arguments << "--export";
-    arguments << "--scale" << "4";
-//    arguments << "--disable-gpu";
-    arguments << "--no-sandbox";
-    //arguments << "--background" << "#ffffff";
-    arguments << "--format" << "jpg";
-    arguments << "--output" << fi.absoluteFilePath()+".jpg" ;
-    arguments << fi.absoluteFilePath();
-
-    qDebug() << arguments.join(" ");
-
-    QProcess process;
-    process.start(drawIoPath, arguments);
-    process.waitForFinished();
-
-    qDebug() << process.readAllStandardOutput();
-    qDebug() << process.readAllStandardError();
-
-
-*/
-
-    MainWindow w;
-    w.show();
-    return a.exec();
+QDomElement DrawioFileParser::findCellById(const QDomNodeList &cells, const QString &id)
+{
+    for (int i = 0; i < cells.count(); ++i) {
+        QDomElement el = cells.at(i).toElement();
+        if (el.attribute("id") == id)
+            return el;
+    }
+    return QDomElement();
 }

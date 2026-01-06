@@ -2,5 +2,8 @@
     <qresource prefix="/">
         <file>Stylesheets/TolmiGrayOrangeV1.qss</file>
         <file>images/settings_icon.png</file>
+        <file>images/DrawioRender_icon.png</file>
+        <file>images/drawio_logo.svg</file>
+        <file>images/DrawioDiagramBuilder_icon.png</file>
     </qresource>
 </RCC>

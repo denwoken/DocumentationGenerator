@@ -9,16 +9,33 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    StatusLamp.cpp \
-    main.cpp \
-    mainwindow.cpp
+    $$PWD/Widgets/DialogHelp.cpp \
+    $$PWD/DrawIoExecutable.cpp \
+    $$PWD/DrawioExporter.cpp \
+    $$PWD/DrawioFileParser.cpp \
+    $$PWD/Widgets/DrawioRenderWidget.cpp \
+    $$PWD/Widgets/StatusLamp.cpp \
+    $$PWD/main.cpp \
+    $$PWD/Widgets/mainwindow.cpp \
+    Widgets/DrawioDiagramBuilderWidget.cpp
 
 HEADERS += \
-    StatusLamp.h \
-    mainwindow.h
+    $$PWD/Widgets/DialogHelp.h \
+    $$PWD/DrawIoExecutable.h \
+    $$PWD/DrawioExporter.h \
+    $$PWD/DrawioFileParser.h \
+    $$PWD/Widgets/DrawioRenderWidget.h \
+    $$PWD/Widgets/StatusLamp.h \
+    $$PWD/Widgets/mainwindow.h \
+    Widgets/DrawioDiagramBuilderWidget.h
 
 FORMS += \
-    mainwindow.ui
+    $$PWD/Widgets/DialogHelp.ui \
+    $$PWD/Widgets/DrawioRenderWidget.ui \
+    $$PWD/Widgets/mainwindow.ui \
+    Widgets/DrawioDiagramBuilderWidget.ui
+
+INCLUDEPATH += $$PWD/Widgets/
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

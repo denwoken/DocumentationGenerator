@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include "DialogHelp.h"
+#include "DrawioRenderWidget.h"
 #include "StatusLamp.h"
 #include "qdir.h"
 #include "qfiledialog.h"
@@ -12,6 +14,9 @@
 #include <QKeyEvent>
 #include "Logging.h"
 #include "LogConsoleWidget.h"
+#include "DrawIoExecutable.h"
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -67,13 +72,62 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
-    m_drawioPathStatus = new StatusLamp(this);
-    m_drawioPathStatus->setLampState(LampState::LampStateOff);
-    ui->horizontalLayout_drawioPath->addWidget(m_drawioPathStatus);
+    ui->drawioExecStatus->setLampState(LampState::LampStateOff);
+    ui->horizontalLayout_drawioPath->addWidget(ui->drawioExecStatus);
 
+    m_drawIoExecutable = new DrawIoExecutable(this);
+
+    connect(m_drawIoExecutable, &DrawIoExecutable::sigStateValidityChanged, this, [this](LampState state){
+        ui->drawioExecStatus->setLampState(state);
+        if(m_drawIoExecutable->version().isEmpty())
+            ui->label_drawioVersion->setText("v*.*.*");
+        else
+            ui->label_drawioVersion->setText("v"+m_drawIoExecutable->version());
+    });
 
     connect(ui->lineEdit_drawIoPath, &QLineEdit::editingFinished, this, &MainWindow::updateDrawIoPath);
+    updateDrawIoPath();
 
+
+
+
+
+
+
+    ui->toolBar->setMovable(false);
+
+    auto group = new QActionGroup(this);
+    group->setExclusive(true);
+
+    ui->actionDrawioRender->setCheckable(true);
+    ui->actionSettings->setCheckable(true);
+    ui->actionDrawioDiagramBuilder->setCheckable(true);
+
+    group->addAction(ui->actionDrawioRender);
+    group->addAction(ui->actionSettings);
+    group->addAction(ui->actionDrawioDiagramBuilder);
+
+
+    ui->actionSettings->setChecked(true);
+    ui->stackedWidget->setCurrentIndex(0);
+
+    connect(ui->actionSettings, &QAction::triggered, this, [this]{ ui->stackedWidget->setCurrentIndex(0); });
+    connect(ui->actionDrawioRender, &QAction::triggered, this, [this]{ ui->stackedWidget->setCurrentIndex(1); });
+    connect(ui->actionDrawioDiagramBuilder, &QAction::triggered, this, [this]{ ui->stackedWidget->setCurrentIndex(2); });
+
+
+    connect(ui->actionAbout, &QAction::triggered, this, [this]{
+        DialogHelp* dialog = new DialogHelp(this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->exec();
+    });
+
+
+
+
+
+
+    ui->drawioRenderWidget->setDrawioExec(m_drawIoExecutable);
 }
 
 MainWindow::~MainWindow()
@@ -112,53 +166,11 @@ void MainWindow::on_pushButton_drawIoDialog_clicked()
             updateDrawIoPath();
         }
     }
-
 }
 
-QString parseDrawIoVersion(const QString& text)
-{
-    static QRegularExpression re(R"((\d+\.\d+\.\d+))");
-    auto match = re.match(text);
-    return match.hasMatch() ? match.captured(1) : QString();
-}
+
 void MainWindow::updateDrawIoPath()
 {
     QString drawIoPath = ui->lineEdit_drawIoPath->text();
-    m_drawioPathStatus->setLampStateMedium();
-
-    QFileInfo info(drawIoPath);
-    if (!info.exists() || !info.isExecutable()) {
-        qCritical() << "Draw.io not found or not executable:" << drawIoPath;
-        m_drawioPathStatus->setLampStateOff();
-        return;
-    }
-
-    QProcess process;
-    process.start(drawIoPath, {"--version"});
-
-    if (!process.waitForFinished(3000)) {
-        qCritical() << "draw.io version check timeout";
-        m_drawioPathStatus->setLampStateOff();
-        return;
-    }
-
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qCritical() << "Process failed:" << process.readAllStandardError();
-        m_drawioPathStatus->setLampStateOff();
-        return;
-    }
-
-    QString output = QString::fromUtf8(process.readAllStandardOutput()).trimmed();
-    qDebug() << "draw.io version output:" << output;
-
-    QString version = parseDrawIoVersion(output);
-    if (version.isEmpty()) {
-        qCritical() << "Failed to parse draw.io version";
-        m_drawioPathStatus->setLampStateOff();
-        return;
-    }
-
-    m_drawioPath = drawIoPath;
-    m_drawioVersion = version;
-    m_drawioPathStatus->setLampStateOn();
+    m_drawIoExecutable->setDrawIOPath(drawIoPath);
 }

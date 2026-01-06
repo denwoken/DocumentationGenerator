@@ -9,13 +9,10 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
-// namespace Logging
-// {
-// class LogConsoleWidget;
-// }
 #include "Logging.h"
 
 class StatusLamp;
+class DrawIoExecutable;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -35,9 +32,8 @@ private:
     Ui::MainWindow *ui;
     Logging::LogConsoleWidget* m_consoleWidget;
 
-    QString m_drawioPath = "";
-    QString m_drawioVersion = "";
-    StatusLamp* m_drawioPathStatus = nullptr;
+    DrawIoExecutable* m_drawIoExecutable;
+
 
 };
 #endif // MAINWINDOW_H
