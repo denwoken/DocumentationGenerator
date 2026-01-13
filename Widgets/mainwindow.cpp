@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    QFile stylesheetFile(":/Stylesheets/TolmiGrayOrangeV1.qss");
+    QFile stylesheetFile(":/Stylesheets/mainStyleSheet.qss");
     if(stylesheetFile.open(QFile::ReadOnly | QFile::Text)){
         QTextStream in(&stylesheetFile);
         QString stylesheet = in.readAll();
@@ -128,6 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     ui->drawioRenderWidget->setDrawioExec(m_drawIoExecutable);
+    ui->drawioDiagramBuilderWidget->setDrawioExec(m_drawIoExecutable);
 }
 
 MainWindow::~MainWindow()

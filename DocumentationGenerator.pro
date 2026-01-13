@@ -17,7 +17,7 @@ SOURCES += \
     $$PWD/Widgets/StatusLamp.cpp \
     $$PWD/main.cpp \
     $$PWD/Widgets/mainwindow.cpp \
-    Widgets/DrawioDiagramBuilderWidget.cpp
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.cpp
 
 HEADERS += \
     $$PWD/Widgets/DialogHelp.h \
@@ -27,13 +27,13 @@ HEADERS += \
     $$PWD/Widgets/DrawioRenderWidget.h \
     $$PWD/Widgets/StatusLamp.h \
     $$PWD/Widgets/mainwindow.h \
-    Widgets/DrawioDiagramBuilderWidget.h
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.h
 
 FORMS += \
     $$PWD/Widgets/DialogHelp.ui \
     $$PWD/Widgets/DrawioRenderWidget.ui \
     $$PWD/Widgets/mainwindow.ui \
-    Widgets/DrawioDiagramBuilderWidget.ui
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.ui
 
 INCLUDEPATH += $$PWD/Widgets/
 

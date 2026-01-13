@@ -18,7 +18,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page">
        <widget class="QGroupBox" name="groupBox">
@@ -113,7 +113,7 @@
       <widget class="QWidget" name="page_3">
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <widget class="DrawioDiagramBuilderWidget" name="widget" native="true"/>
+         <widget class="DrawioDiagramBuilderWidget" name="drawioDiagramBuilderWidget" native="true"/>
         </item>
        </layout>
       </widget>

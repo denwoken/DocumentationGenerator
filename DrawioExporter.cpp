@@ -67,8 +67,8 @@ bool DrawioExporter::exportToImage(const QString &drawioPath, const QString &out
     arguments << "--no-sandbox";
     //arguments << "--background" << "#ffffff";
     arguments << "--format" << format;
-    arguments << "--output" << "\"" + fi.absoluteFilePath() + "\"";
-    arguments << "\"" + QFileInfo(drawioPath).absoluteFilePath() + "\"";
+    arguments << "--output" << /*"\"" +*/ fi.absoluteFilePath() /*+ "\""*/;
+    arguments << /*"\"" +*/ QFileInfo(drawioPath).absoluteFilePath() /*+ "\""*/;
 
     qDebug() << "run draw.io.exe with arguments: " << arguments.join(" ");
 
@@ -85,9 +85,6 @@ bool DrawioExporter::exportToImage(const QString &drawioPath, const QString &out
         //someErrorOccured();
         return 1;
     }
-
     qDebug() << process.readAllStandardOutput();
-    qDebug() << process.readAllStandardError();
-
     return 0;
 }

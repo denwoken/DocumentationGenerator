@@ -1,8 +1,10 @@
 #include "DrawioDiagramBuilderWidget.h"
 #include "DrawioExporter.h"
 #include "qdebug.h"
+#include "qfiledialog.h"
 #include "qtimer.h"
 #include "ui_DrawioDiagramBuilderWidget.h"
+#include "DrawioFileParser.h"
 
 DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
     : QWidget(parent)
@@ -101,7 +103,7 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
         "int getBufferSize()"
     });
 
-    addPlaceHolder("protectedMethods", {
+    addPlaceHolder("privateMethods", {
        "void heartbeat()",
        "bool findDevice()",
        "void modbusStateChanged(QModbusDevice::State state)",
@@ -121,13 +123,6 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
        "bool check()"
     });
 
-    addPlaceHolder("signals", {
-      "void sigGetInputRegistersUpdate(quint16 startAddres, QVector<quint16> data)",
-      "void sigGetHoldingRegistersUpdate(quint16 startAddres, QVector<quint16> data)",
-      "void sigSetHoldingRegistersUpdate(quint16 startAddres, QVector<quint16> data)",
-      "void sigGetAllHoldingRegistersUpdate(QVector<quint16> data)",
-      "void sigGetAllInputRegistersUpdate(QVector<quint16> data)"
-    });
 
 
 
@@ -148,19 +143,53 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
 
 
 
+    connect(ui->pushButton_addData, &QPushButton::clicked,
+            this, &DrawioDiagramBuilderWidget::onAddPlaceHolderData);
+    connect(ui->pushButton_remData, &QPushButton::clicked,
+            this, &DrawioDiagramBuilderWidget::onRemovePlaceHolderData);
+
+    connect(ui->listWidget_placeHoldersData, &QListWidget::itemChanged,
+            this, &DrawioDiagramBuilderWidget::onPlaceHolderDataItemChanged);
 
 
 
 
+    connect(ui->pushButton_genOutput, &QPushButton::clicked,
+            this, &DrawioDiagramBuilderWidget::onDrawioGenerateButton);
 
+
+    connect(ui->pushButton_clearData, &QPushButton::clicked,
+            this, [this](){
+        auto selectedPlaceHolder = ui->listWidget_placeHoldersNames->selectedItems();
+        if (selectedPlaceHolder.isEmpty()) return;
+        QString placeholderName = selectedPlaceHolder.at(0)->text();
+
+
+        auto iter = m_placeHolders.find(placeholderName);
+        if(iter != m_placeHolders.end()){
+            iter->clear();
+        }
+        ui->listWidget_placeHoldersData->clear();
+    });
+
+
+
+    connect(ui->pushButton_genOutputImage, &QPushButton::clicked,
+            this, &DrawioDiagramBuilderWidget::onImageGenerateButton);
 
 
     m_drawioExporter = new DrawioExporter(this);
+    m_drawioFileParser = new DrawioFileParser(this);
 }
 
 DrawioDiagramBuilderWidget::~DrawioDiagramBuilderWidget()
 {
     delete ui;
+}
+
+void DrawioDiagramBuilderWidget::setDrawioExec(DrawIoExecutable *executable)
+{
+    m_drawioExporter->setDrawIoExec(executable);
 }
 
 void DrawioDiagramBuilderWidget::addPlaceHolder(QString key, QStringList list)
@@ -169,12 +198,13 @@ void DrawioDiagramBuilderWidget::addPlaceHolder(QString key, QStringList list)
     auto items = listWidget->findItems(key,Qt::MatchFlag::MatchCaseSensitive);
     if(items.size()){
         listWidget->setCurrentItem(items.at(0));
+        items.at(0)->setData(Qt::UserRole, key);
     }else
     {
         auto* item = new QListWidgetItem(key);
         item->setFlags(item->flags() | Qt::ItemIsEditable);
-        item->setData(Qt::UserRole, item->text());
-        listWidget->insertItem(listWidget->count()-1, item);
+        item->setData(Qt::UserRole, key);
+        listWidget->addItem(item);
         listWidget->setCurrentItem(item);
     }
 
@@ -208,31 +238,23 @@ void DrawioDiagramBuilderWidget::onAddPlaceHolder()
     if (!selected.isEmpty())
         selectedRow = ui->listWidget_placeHoldersNames->row(selected.first()) + 1;
 
+    auto items = ui->listWidget_placeHoldersNames->findItems("-",Qt::MatchFlag::MatchCaseSensitive);
+    if(items.size()){
+        ui->listWidget_placeHoldersNames->setCurrentItem(items.at(0));
+        ui->listWidget_placeHoldersNames->editItem(items.at(0));
+    } else
+    {
+        auto* item = new QListWidgetItem("-");
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+        item->setData(Qt::UserRole, "-");
+        ui->listWidget_placeHoldersNames->insertItem(selectedRow, item);
+        ui->listWidget_placeHoldersNames->setCurrentItem(item);
+        ui->listWidget_placeHoldersNames->editItem(item);
+    }
 
     auto iter = m_placeHolders.find("-");
     if(iter == m_placeHolders.end()){
         m_placeHolders.insert("-", {});
-
-        auto* item = new QListWidgetItem("-");
-        item->setFlags(item->flags() | Qt::ItemIsEditable);
-        item->setData(Qt::UserRole, item->text());
-
-        ui->listWidget_placeHoldersNames->insertItem(selectedRow, item);
-        ui->listWidget_placeHoldersNames->setCurrentItem(item);
-        ui->listWidget_placeHoldersNames->editItem(item);
-    } else {
-        auto list = ui->listWidget_placeHoldersNames->findItems("-",Qt::MatchFlag::MatchCaseSensitive);
-        if(list.size()){
-            ui->listWidget_placeHoldersNames->setCurrentItem(list.at(0));
-        }else
-        {
-            auto* item = new QListWidgetItem("-");
-            item->setFlags(item->flags() | Qt::ItemIsEditable);
-            item->setData(Qt::UserRole, item->text());
-
-            ui->listWidget_placeHoldersNames->insertItem(selectedRow, item);
-            ui->listWidget_placeHoldersNames->setCurrentRow(selectedRow);
-        }
     }
 }
 
@@ -256,6 +278,8 @@ void DrawioDiagramBuilderWidget::onRemovePlaceHolder()
         m_placeHolders.remove(selection->text());
         delete ui->listWidget_placeHoldersNames->takeItem(selectedRow);
     }
+    else
+        ui->listWidget_placeHoldersNames->clearSelection();
 }
 
 void DrawioDiagramBuilderWidget::onPlaceHolderItemChanged(QListWidgetItem *item)
@@ -305,8 +329,167 @@ void DrawioDiagramBuilderWidget::placeHolderSelectionChanged()
     if(items.size()){
         QString key = items.at(0)->text();
         ui->listWidget_placeHoldersData->clear();
-        ui->listWidget_placeHoldersData->addItems(m_placeHolders[key]);
+
+        for(auto dataLine: m_placeHolders[key]){
+            auto* item = new QListWidgetItem(dataLine);
+            item->setFlags(item->flags() | Qt::ItemIsEditable);
+            item->setData(Qt::UserRole, dataLine);
+            int lastRow = ui->listWidget_placeHoldersData->count();
+            ui->listWidget_placeHoldersData->insertItem(lastRow,item);
+            ui->listWidget_placeHoldersData->setCurrentItem(item);
+        }
+        //ui->listWidget_placeHoldersData->addItems(m_placeHolders[key]);
     }
+}
+
+void DrawioDiagramBuilderWidget::onAddPlaceHolderData()
+{
+    auto selectedPlaceHolder = ui->listWidget_placeHoldersNames->selectedItems();
+    if (selectedPlaceHolder.isEmpty()) return;
+    QString placeholderName = selectedPlaceHolder.at(0)->text();
+
+    auto selected = ui->listWidget_placeHoldersData->selectedItems();
+
+    int selectedRow = ui->listWidget_placeHoldersData->count(); // по умолчанию в конец
+    QString selectedLine;
+    if (!selected.isEmpty()){
+        selectedRow = ui->listWidget_placeHoldersData->row(selected.first()) + 1;
+        selectedLine = selected.first()->text();
+    }
+
+    auto items = ui->listWidget_placeHoldersData->findItems("-",Qt::MatchFlag::MatchCaseSensitive);
+    if(items.size()){
+        ui->listWidget_placeHoldersData->setCurrentItem(items.at(0));
+        ui->listWidget_placeHoldersData->editItem(items.at(0));
+    } else {
+        auto* item = new QListWidgetItem("-");
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+        item->setData(Qt::UserRole, "-");
+        ui->listWidget_placeHoldersData->insertItem(selectedRow, item);
+        ui->listWidget_placeHoldersData->setCurrentItem(item);
+        ui->listWidget_placeHoldersData->editItem(item);
+
+    }
+
+    auto iter = m_placeHolders.find(placeholderName);
+    if(iter != m_placeHolders.end()){
+        if(!iter->contains("-")){
+            int index = std::min(0, iter->indexOf(selectedLine));
+            iter->insert(index, "-");
+        }
+    }
+
+
+}
+
+void DrawioDiagramBuilderWidget::onRemovePlaceHolderData()
+{
+    auto selectedPlaceHolder = ui->listWidget_placeHoldersNames->selectedItems();
+    if (selectedPlaceHolder.isEmpty()) return;
+    QString placeholderName = selectedPlaceHolder.at(0)->text();
+
+    auto selected = ui->listWidget_placeHoldersData->selectedItems();
+    QString selectedLine;
+    if (!selected.isEmpty()){
+        selectedLine = selected.at(0)->text();
+        int row = ui->listWidget_placeHoldersData->row(selected.at(0));
+        delete ui->listWidget_placeHoldersData->takeItem(row);
+    }
+
+    auto iter = m_placeHolders.find(placeholderName);
+    if(iter != m_placeHolders.end()){
+        iter->removeOne(selectedLine);
+    }
+}
+
+void DrawioDiagramBuilderWidget::onPlaceHolderDataItemChanged(QListWidgetItem *item)
+{
+    auto selectedPlaceHolder = ui->listWidget_placeHoldersNames->selectedItems();
+    if (selectedPlaceHolder.isEmpty()) return;
+    QString placeholderName = selectedPlaceHolder.at(0)->text();
+
+    const QString oldName = item->data(Qt::UserRole).toString();
+    const QString newName = item->text();
+
+    //  пустое имя запрещаем
+    if (newName.isEmpty()) {
+        item->setText(oldName);
+        return;
+    }
+
+    //  если не поменялось — ничего не делаем
+    if (oldName == newName) return;
+
+
+    auto iter = m_placeHolders.find(placeholderName);
+    if(iter != m_placeHolders.end()){
+        int idx = iter->indexOf(oldName);
+        if (idx >= 0) (*iter)[idx] = newName;
+    }
+
+    //  обновляем "старое имя" в item
+    item->setData(Qt::UserRole, newName);
+}
+
+void DrawioDiagramBuilderWidget::onDrawioGenerateButton()
+{
+
+    ui->drawioBuildStatus->setLampState(LampState::LampStateMedium);
+    QCoreApplication::processEvents();
+
+    m_drawioFileParser->loadDrawioFile(ui->lineEdit_DrawioTemplate->text());
+    m_drawioFileParser->setPlaceHoldersParameters(m_placeHolders);
+    bool res = m_drawioFileParser->insertPlaceHolders();
+    if(res){
+        ui->drawioBuildStatus->setLampState(LampState::LampStateOff);
+        return;
+    }
+
+    QString outputPath = ui->lineEdit_DrawioOutput->text();
+    res = m_drawioExporter->exportToDrawio(
+        *m_drawioFileParser->getDrawioDocumentOutput(),
+        outputPath );
+    if(res){
+        ui->drawioBuildStatus->setLampState(LampState::LampStateOff);
+        return;
+    }
+
+    ui->drawioBuildStatus->setLampState(LampState::LampStateOn);
+}
+
+void DrawioDiagramBuilderWidget::onImageGenerateButton()
+{
+    ui->drawioBuildStatus->setLampState(LampState::LampStateMedium);
+    QCoreApplication::processEvents();
+
+    m_drawioFileParser->loadDrawioFile(ui->lineEdit_DrawioTemplate->text());
+    m_drawioFileParser->setPlaceHoldersParameters(m_placeHolders);
+    bool res = m_drawioFileParser->insertPlaceHolders();
+    if(res){
+        ui->drawioBuildStatus->setLampState(LampState::LampStateOff);
+        return;
+    }
+
+    QString outputDrawioPath = ui->lineEdit_DrawioOutput->text();
+    res = m_drawioExporter->exportToDrawio(
+        *m_drawioFileParser->getDrawioDocumentOutput(),
+        outputDrawioPath );
+    if(res){
+        ui->drawioBuildStatus->setLampState(LampState::LampStateOff);
+        return;
+    }
+
+    QString outputImagePath = ui->lineEdit_ImageOutput->text();
+    res = m_drawioExporter->exportToImage(
+        outputDrawioPath,
+        outputImagePath
+    );
+    if(res){
+        ui->drawioBuildStatus->setLampState(LampState::LampStateOff);
+        return;
+    }
+
+    ui->drawioBuildStatus->setLampState(LampState::LampStateOn);
 }
 
 
@@ -328,4 +511,67 @@ void DrawioDiagramBuilderWidget::placeHolderSelectionChanged()
 
 
 
+
+
+void DrawioDiagramBuilderWidget::on_pushButton_DrawioTemplateDialog_clicked()
+{
+    QFileDialog* fileDialog = new QFileDialog(this);
+    fileDialog->setFileMode(QFileDialog::FileMode::ExistingFile);
+    fileDialog->setAcceptMode(QFileDialog::AcceptMode::AcceptOpen);
+    fileDialog->setViewMode(QFileDialog::ViewMode::Detail);
+    fileDialog->setNameFilter(tr("draw.io(*.drawio);;All Files(*.*)"));
+
+    QFileInfo fileinfo(ui->lineEdit_DrawioTemplate->text());
+    fileDialog->setDirectory(fileinfo.dir());
+    fileDialog->selectFile(fileinfo.absoluteFilePath());
+
+    if(fileDialog->exec()){
+        auto files = fileDialog->selectedFiles();
+        if(files.size()){
+            ui->lineEdit_DrawioTemplate->setText(files[0]);
+        }
+    }
+}
+
+
+void DrawioDiagramBuilderWidget::on_pushButton_DrawioOutputDialog_clicked()
+{
+    QFileDialog* fileDialog = new QFileDialog(this);
+    fileDialog->setFileMode(QFileDialog::FileMode::AnyFile);
+    fileDialog->setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
+    fileDialog->setViewMode(QFileDialog::ViewMode::Detail);
+    //fileDialog->setNameFilter(tr("jpeg image(*.jpg);;All Files(*.*)"));
+
+    QFileInfo fileinfo(ui->lineEdit_DrawioOutput->text());
+    fileDialog->setDirectory(fileinfo.dir());
+    fileDialog->selectFile(fileinfo.absoluteFilePath());
+
+    if(fileDialog->exec()){
+        auto files = fileDialog->selectedFiles();
+        if(files.size()){
+            ui->lineEdit_DrawioOutput->setText(files[0]);
+        }
+    }
+}
+
+
+void DrawioDiagramBuilderWidget::on_pushButton_ImageOutputDialog_clicked()
+{
+    QFileDialog* fileDialog = new QFileDialog(this);
+    fileDialog->setFileMode(QFileDialog::FileMode::AnyFile);
+    fileDialog->setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
+    fileDialog->setViewMode(QFileDialog::ViewMode::Detail);
+    //fileDialog->setNameFilter(tr("jpeg image(*.jpg);;All Files(*.*)"));
+
+    QFileInfo fileinfo(ui->lineEdit_ImageOutput->text());
+    fileDialog->setDirectory(fileinfo.dir());
+    fileDialog->selectFile(fileinfo.absoluteFilePath());
+
+    if(fileDialog->exec()){
+        auto files = fileDialog->selectedFiles();
+        if(files.size()){
+            ui->lineEdit_ImageOutput->setText(files[0]);
+        }
+    }
+}
 
