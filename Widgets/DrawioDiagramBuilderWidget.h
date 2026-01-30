@@ -8,6 +8,7 @@ class DrawioExporter;
 class QListWidgetItem;
 class DrawIoExecutable;
 class DrawioFileParser;
+class SimplifiedFieldsParserWidget;
 class DrawioDiagramBuilderWidget : public QWidget
 {
     Q_OBJECT
@@ -31,6 +32,7 @@ private slots:
 
 private:
     Ui::DrawioDiagramBuilderWidget *ui;
+    SimplifiedFieldsParserWidget* m_simpleTextParser;
     DrawioExporter* m_drawioExporter;
     DrawioFileParser* m_drawioFileParser;
     QMap<QString, QStringList> m_placeHolders;

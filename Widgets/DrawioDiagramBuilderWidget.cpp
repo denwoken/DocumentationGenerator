@@ -5,6 +5,7 @@
 #include "qtimer.h"
 #include "ui_DrawioDiagramBuilderWidget.h"
 #include "DrawioFileParser.h"
+#include "SimplifiedFieldsParserWidget.h"
 
 DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
     : QWidget(parent)
@@ -17,12 +18,11 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
     ui->drawioBuildStatus->setText("Generation Result");
 
 
-
     ui->listWidget_placeHoldersNames->setEditTriggers(
         QAbstractItemView::DoubleClicked |
         QAbstractItemView::EditKeyPressed |
         QAbstractItemView::SelectedClicked
-        );
+    );
 
 
     auto *lw = ui->listWidget_placeHoldersNames;
@@ -40,7 +40,6 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
                                    "class Field 2"});
     addPlaceHolder("publicMethods", {"public Method 1", "public Method 2"});
     addPlaceHolder("privateMethods", {"private Method 1", "private Method 2"});
-
     */
 
     addPlaceHolder("className", {"PlcModbusDevice"});
@@ -176,6 +175,28 @@ DrawioDiagramBuilderWidget::DrawioDiagramBuilderWidget(QWidget *parent)
 
     connect(ui->pushButton_genOutputImage, &QPushButton::clicked,
             this, &DrawioDiagramBuilderWidget::onImageGenerateButton);
+
+
+
+    m_simpleTextParser = new SimplifiedFieldsParserWidget(this);
+    m_simpleTextParser->setWindowFlags(Qt::Popup);
+    connect(ui->pushButton_fromPlainText, &QPushButton::clicked,
+            this, [this](){
+        if(m_simpleTextParser->exec()){
+            auto list = m_simpleTextParser->getOutputList();
+            onRemovePlaceHolderData();
+            auto selectedPlaceHolder = ui->listWidget_placeHoldersNames->selectedItems();
+            if (selectedPlaceHolder.isEmpty()) return;
+            QString placeholderName = selectedPlaceHolder.at(0)->text();
+            addPlaceHolder(placeholderName, list);
+            placeHolderSelectionChanged();
+        }
+
+
+    });
+
+
+
 
 
     m_drawioExporter = new DrawioExporter(this);

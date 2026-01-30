@@ -5,5 +5,14 @@
         <file>images/DrawioRender_icon.png</file>
         <file>images/drawio_logo.svg</file>
         <file>images/DrawioDiagramBuilder_icon.png</file>
+        <file>images/arrow_close.png</file>
+        <file>images/arrow_close_black.png</file>
+        <file>images/arrow_close_hover.png</file>
+        <file>images/arrow_open.png</file>
+        <file>images/arrow_open_2.png</file>
+        <file>images/arrow_open_hover.png</file>
+        <file>images/arrow_open_hover_2.png</file>
+        <file>images/Close1.png</file>
+        <file>images/Cube.png</file>
     </qresource>
 </RCC>

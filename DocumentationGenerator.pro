@@ -17,7 +17,9 @@ SOURCES += \
     $$PWD/Widgets/StatusLamp.cpp \
     $$PWD/main.cpp \
     $$PWD/Widgets/mainwindow.cpp \
-    $$PWD/Widgets/DrawioDiagramBuilderWidget.cpp
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.cpp \
+    $$PWD/Widgets/CustomStatusBar.cpp \
+    $$PWD/Widgets/SimplifiedFieldsParserWidget.cpp
 
 HEADERS += \
     $$PWD/Widgets/DialogHelp.h \
@@ -27,13 +29,16 @@ HEADERS += \
     $$PWD/Widgets/DrawioRenderWidget.h \
     $$PWD/Widgets/StatusLamp.h \
     $$PWD/Widgets/mainwindow.h \
-    $$PWD/Widgets/DrawioDiagramBuilderWidget.h
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.h \
+    $$PWD/Widgets/CustomStatusBar.h \
+    $$PWD/Widgets/SimplifiedFieldsParserWidget.h
 
 FORMS += \
     $$PWD/Widgets/DialogHelp.ui \
     $$PWD/Widgets/DrawioRenderWidget.ui \
     $$PWD/Widgets/mainwindow.ui \
-    $$PWD/Widgets/DrawioDiagramBuilderWidget.ui
+    $$PWD/Widgets/DrawioDiagramBuilderWidget.ui \
+    $$PWD/Widgets/SimplifiedFieldsParserWidget.ui
 
 INCLUDEPATH += $$PWD/Widgets/
 
@@ -43,7 +48,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    resources.qrc
+    $$PWD/resources.qrc
 
 
 include($$PWD/LogConsole/LogConsole.pri)

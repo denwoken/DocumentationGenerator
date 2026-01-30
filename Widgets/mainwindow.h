@@ -13,6 +13,7 @@ QT_END_NAMESPACE
 
 class StatusLamp;
 class DrawIoExecutable;
+class CustomStatusBar;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -30,7 +31,9 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    CustomStatusBar* m_statusBar;
     Logging::LogConsoleWidget* m_consoleWidget;
+
 
     DrawIoExecutable* m_drawIoExecutable;
 

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "CustomStatusBar.h"
 #include "DialogHelp.h"
 #include "DrawioRenderWidget.h"
 #include "StatusLamp.h"
@@ -15,7 +16,7 @@
 #include "Logging.h"
 #include "LogConsoleWidget.h"
 #include "DrawIoExecutable.h"
-
+#include "CustomStatusBar.h"
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -124,7 +125,14 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
+    m_statusBar = new CustomStatusBar(this);
+    setStatusBar(m_statusBar);
 
+
+    connect(m_consoleWidget, &Logging::LogConsoleWidget::appendedNewLine,
+        m_statusBar, [this](const Logging::LogLine line){
+        m_statusBar->displayLogLine(line.type, line.message);
+    });
 
 
     ui->drawioRenderWidget->setDrawioExec(m_drawIoExecutable);
